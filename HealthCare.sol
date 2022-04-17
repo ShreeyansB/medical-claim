@@ -12,7 +12,7 @@ contract HealthCare {
         uint id;
         address patientAddr;
         address hospitalAddr;
-        uint billChecksum; // the images of bills sumbitted by patient's checksum. Stored to prove authenticity of images.
+        string billId; // points to the pdf stored in supabase
         uint price;
         mapping (address => RecordStatus) status; // status of the record
         bool isValid; // variable to check if reacord has already been created or not
@@ -24,8 +24,8 @@ contract HealthCare {
 
     // Helpers
     modifier onlyOwner {
-    require(owner == msg.sender, 'Not Authorised');
-    _;
+        require(owner == msg.sender, 'Not Authorised');
+        _;
     }
 
     function setOwner(address _owner) onlyOwner external { 
@@ -37,7 +37,7 @@ contract HealthCare {
     event recordSigned(uint id, address patientAddr, address hospitalAddr, address owner, uint price, RecordStatus status, string statusMsg);
 
     // Functions
-    function newRecord(uint _id, address _hospitalAddr, uint _billChecksum, uint _price) public {
+    function newRecord(uint _id, address _hospitalAddr, string memory _billId, uint _price) public {
         Record storage _newRecord = records[_id];
         require(!records[_id].isValid, "Record of entered id already exists.");
         require(msg.sender != _hospitalAddr, "Patient address and Hospital Address cannot be same.");
@@ -45,7 +45,7 @@ contract HealthCare {
         _newRecord.id = _id;
         _newRecord.patientAddr = msg.sender;
         _newRecord.hospitalAddr = _hospitalAddr;
-        _newRecord.billChecksum = _billChecksum;
+        _newRecord.billId = _billId;
         _newRecord.price = _price;
         _newRecord.isValid = true;
         
