@@ -5,11 +5,11 @@ pragma solidity 0.8.12;
 contract HealthCare {
     address private owner; // owner is Insurance Company
 
-    mapping (uint=> Record) public records;
+    mapping (address => Record[]) public records;
     enum RecordStatus {PENDING, APPROVED, DENIED}
 
     struct Record {
-        uint id;
+        uint recordId;
         address patientAddr;
         address hospitalAddr;
         string billId; // points to the pdf stored in supabase
@@ -33,33 +33,35 @@ contract HealthCare {
     }
 
     // Events
-    event recordCreated(uint id, address patientAddr, address hospitalAddr, uint price);
-    event recordSigned(uint id, address patientAddr, address hospitalAddr, address owner, uint price, RecordStatus status, string statusMsg);
+    event recordCreated(uint indexed recordId, address indexed patientAddr, address indexed hospitalAddr, uint price);
+    event recordSigned(uint indexed recordId, address indexed patientAddr, address indexed hospitalAddr, address owner, uint price, RecordStatus status, string statusMsg);
 
     // Functions
-    function newRecord(uint _id, address _hospitalAddr, string memory _billId, uint _price) public {
-        Record storage _newRecord = records[_id];
-        require(!records[_id].isValid, "Record of entered id already exists.");
+    function newRecord(address _hospitalAddr, string memory _billId, uint _price) public {
+        Record[] storage userRecords = records[msg.sender];
+        uint idx = userRecords.length;
+        userRecords.push();
+        Record storage record = userRecords[idx];
         require(msg.sender != _hospitalAddr, "Patient address and Hospital Address cannot be same.");
-
-        _newRecord.id = _id;
-        _newRecord.patientAddr = msg.sender;
-        _newRecord.hospitalAddr = _hospitalAddr;
-        _newRecord.billId = _billId;
-        _newRecord.price = _price;
-        _newRecord.isValid = true;
         
-        emit recordCreated(_newRecord.id, _newRecord.patientAddr, _newRecord.hospitalAddr, _newRecord.price);
+        record.recordId = idx;
+        record.patientAddr = msg.sender;
+        record.hospitalAddr = _hospitalAddr;
+        record.billId = _billId;
+        record.price = _price;
+        record.isValid = true;
+
+        emit recordCreated(record.recordId, record.patientAddr, record.hospitalAddr, record.price);
     }
 
-    function signRecord(uint _id, RecordStatus _status, string memory _statusMsg ) public { // status msg says why record was approved or disapproved
-        Record storage record = records[_id];
-        require(records[_id].isValid, "Record does not exist.");
+    function signRecord(uint _id, address _patientAddr, RecordStatus _status, string memory _statusMsg ) public { // status msg says why record was approved or disapproved
+        Record storage record = records[_patientAddr][_id];
+        require(record.isValid == true, "Record does not exist.");
         require(msg.sender == owner || (record.hospitalAddr == msg.sender), "You are not allowed to sign this Record.");
         require(record.status[msg.sender] == RecordStatus.PENDING, "Record has already been signed.");
 
         record.status[msg.sender] = _status;
-        emit recordSigned(record.id, record.patientAddr, record.hospitalAddr, owner, record.price, _status, _statusMsg);
+        emit recordSigned(record.recordId, record.patientAddr, record.hospitalAddr, owner, record.price, _status, _statusMsg);
     }
 
 }
