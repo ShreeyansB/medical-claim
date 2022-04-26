@@ -14,7 +14,7 @@ contract HealthCare {
         address hospitalAddr;
         string billId; // points to the pdf stored in supabase
         uint price;
-        mapping (address => RecordStatus) status; // status of the record
+        RecordStatus[] status; // status of the record
         bool isValid; // variable to check if reacord has already been created or not
     }
 
@@ -50,17 +50,24 @@ contract HealthCare {
         record.billId = _billId;
         record.price = _price;
         record.isValid = true;
+        record.status.push(RecordStatus.PENDING);
+        record.status.push(RecordStatus.PENDING);
 
         emit recordCreated(record.recordId, record.patientAddr, record.hospitalAddr, record.price);
     }
 
-    function signRecord(uint _id, address _patientAddr, RecordStatus _status, string memory _statusMsg ) public { // status msg says why record was approved or disapproved
+    function signRecord(uint _id, address _patientAddr, RecordStatus _status, string memory _statusMsg ) public {
         Record storage record = records[_patientAddr][_id];
         require(record.isValid == true, "Record does not exist.");
-        require(msg.sender == owner || (record.hospitalAddr == msg.sender), "You are not allowed to sign this Record.");
-        require(record.status[msg.sender] == RecordStatus.PENDING, "Record has already been signed.");
+        require(owner == msg.sender || record.hospitalAddr == msg.sender, "You are not allowed to sign this Record.");
+        uint index = 0;
+        if (msg.sender == owner) {
+            index = 1;
+        }
 
-        record.status[msg.sender] = _status;
+        require(record.status[index] == RecordStatus.PENDING, "Record has already been signed.");
+
+        record.status[index] = _status;
         emit recordSigned(record.recordId, record.patientAddr, record.hospitalAddr, owner, record.price, _status, _statusMsg);
     }
 
